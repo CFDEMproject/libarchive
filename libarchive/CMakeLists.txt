@@ -245,17 +245,18 @@ ENDIF()
 # Libarchive is a shared library
 IF(BUILD_SHARED_LIBS)
   ADD_LIBRARY(archive SHARED ${libarchive_SOURCES} ${include_HEADERS})
-  TARGET_INCLUDE_DIRECTORIES(archive PUBLIC .)
+  TARGET_INCLUDE_DIRECTORIES(archive PRIVATE .)
   TARGET_LINK_LIBRARIES(archive ${ADDITIONAL_LIBS})
-  SET_TARGET_PROPERTIES(archive PROPERTIES SOVERSION ${SOVERSION})
+  SET_TARGET_PROPERTIES(archive PROPERTIES SOVERSION ${SOVERSION} EXPORT_NAME LibArchiveShared)
 ENDIF(BUILD_SHARED_LIBS)
 
 # archive_static is a static library
 ADD_LIBRARY(archive_static STATIC ${libarchive_SOURCES} ${include_HEADERS})
-TARGET_INCLUDE_DIRECTORIES(archive_static PUBLIC .)
+add_library(LibArchive::LibArchive ALIAS archive_static)
+TARGET_INCLUDE_DIRECTORIES(archive_static PRIVATE .)
 TARGET_LINK_LIBRARIES(archive_static ${ADDITIONAL_LIBS})
 SET_TARGET_PROPERTIES(archive_static PROPERTIES COMPILE_DEFINITIONS
-  LIBARCHIVE_STATIC)
+  LIBARCHIVE_STATIC EXPORT_NAME LibArchive)
 # On Posix systems, libarchive.so and libarchive.a can co-exist.
 IF(NOT WIN32 OR CYGWIN OR NOT BUILD_SHARED_LIBS)
   SET_TARGET_PROPERTIES(archive_static PROPERTIES OUTPUT_NAME archive)
@@ -263,18 +264,21 @@ ENDIF(NOT WIN32 OR CYGWIN OR NOT BUILD_SHARED_LIBS)
 
 IF(ENABLE_INSTALL)
   # How to install the libraries
+  SET(libarchive_TARGETS archive_static)
   IF(BUILD_SHARED_LIBS)
-    INSTALL(TARGETS archive
-            RUNTIME DESTINATION bin
-            LIBRARY DESTINATION lib
-            ARCHIVE DESTINATION lib)
+    LIST(APPEND libarchive_TARGETS archive)
   ENDIF(BUILD_SHARED_LIBS)
-  INSTALL(TARGETS archive_static
+  INSTALL(TARGETS ${libarchive_TARGETS}
+          EXPORT  LibArchiveConfig
           RUNTIME DESTINATION bin
           LIBRARY DESTINATION lib
           ARCHIVE DESTINATION lib)
   INSTALL_MAN(${libarchive_MANS})
   INSTALL(FILES ${include_HEADERS} DESTINATION include)
+  INSTALL(EXPORT LibArchiveConfig
+    NAMESPACE LibArchive::
+    DESTINATION lib/cmake/libarchive
+  )
 ENDIF()
 
 add_subdirectory(test)
